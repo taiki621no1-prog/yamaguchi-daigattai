@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>やまぐちけ だいがったい！</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: linear-gradient(160deg, #fff8e7 0%, #ffecc8 50%, #ffe0a0 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Hiragino Maru Gothic ProN', 'Hiragino Maru Gothic Pro', 'BIZ UDGothic', 'Meiryo', sans-serif;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+  }
+
+  /* ===== TITLE SCREEN ===== */
+  #titleScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    width: 100%;
+    height: 100vh;
+    padding: 20px;
+  }
+
+  #titleLogo {
+    max-width: min(90vw, 500px);
+    filter: drop-shadow(0 4px 16px rgba(0,0,0,0.18));
+    animation: logoBounce 2s ease-in-out infinite;
+  }
+
+  @keyframes logoBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .title-chars {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .title-char {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .title-char img { width: 90%; height: 90%; object-fit: cover; border-radius: 50%; }
+
+  .start-btn {
+    background: linear-gradient(135deg, #ff8c00, #ff5500);
+    color: white;
+    border: none;
+    border-radius: 60px;
+    padding: 20px 60px;
+    font-size: clamp(22px, 5vw, 32px);
+    font-family: inherit;
+    font-weight: bold;
+    box-shadow: 0 6px 0 #c04000, 0 8px 20px rgba(0,0,0,0.2);
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: transform 0.1s, box-shadow 0.1s;
+    margin-top: 10px;
+  }
+
+  .start-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #c04000, 0 4px 10px rgba(0,0,0,0.2);
+  }
+
+  /* ===== GAME SCREEN ===== */
+  #gameScreen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    height: 100vh;
+    padding: 8px;
+    gap: 6px;
+  }
+
+  #hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 420px;
+    padding: 0 4px;
+  }
+
+  #scoreBox {
+    background: rgba(255,255,255,0.7);
+    border-radius: 16px;
+    padding: 6px 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+
+  #scoreLabel { font-size: 11px; color: #888; font-weight: bold; }
+  #scoreValue { font-size: 26px; font-weight: bold; color: #e05500; line-height: 1; }
+
+  #nextBox {
+    background: rgba(255,255,255,0.7);
+    border-radius: 16px;
+    padding: 6px 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #nextLabel { font-size: 11px; color: #888; font-weight: bold; }
+  #nextImg { width: 40px; height: 40px; object-fit: cover; border-radius: 50%; }
+
+  /* Game canvas wrapper */
+  #canvasWrap {
+    position: relative;
+    background: rgba(255,255,255,0.55);
+    border-radius: 24px;
+    box-shadow:
+      0 8px 40px rgba(180,120,0,0.18),
+      inset 0 1px 0 rgba(255,255,255,0.8),
+      inset 0 -1px 0 rgba(0,0,0,0.05);
+    border: 2.5px solid rgba(255,200,80,0.5);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  #gameCanvas { display: block; }
+
+  /* ===== OVERLAY MESSAGES ===== */
+  #floatMsg {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 40%;
+    pointer-events: none;
+    z-index: 200;
+    font-size: clamp(28px, 8vw, 48px);
+    font-weight: bold;
+    color: #ff6600;
+    text-shadow: 0 2px 0 white, 0 0 20px rgba(255,200,0,0.8);
+    opacity: 0;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+  }
+
+  /* ===== UFO OVERLAY ===== */
+  #ufoOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,30,0.82);
+    z-index: 300;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #ufoCanvas { position: absolute; inset: 0; }
+
+  #ufoText {
+    position: relative;
+    z-index: 10;
+    font-size: clamp(28px, 8vw, 56px);
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 30px #0ff, 0 0 60px #0af;
+    opacity: 0;
+    letter-spacing: 2px;
+  }
+
+  /* ===== GAME OVER ===== */
+  #gameOverScreen {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 400;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .go-box {
+    background: white;
+    border-radius: 28px;
+    padding: 36px 48px;
+    text-align: center;
+    box-shadow: 0 16px 60px rgba(0,0,0,0.3);
+    max-width: 90vw;
+  }
+
+  .go-title {
+    font-size: clamp(22px, 6vw, 32px);
+    font-weight: bold;
+    color: #e05500;
+    margin-bottom: 12px;
+  }
+
+  .go-score { font-size: clamp(40px, 10vw, 60px); font-weight: bold; color: #ff8c00; }
+  .go-rank { font-size: clamp(20px, 5vw, 28px); color: #555; margin: 8px 0 20px; }
+
+  .retry-btn {
+    background: linear-gradient(135deg, #ff8c00, #ff5500);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 16px 48px;
+    font-size: clamp(18px, 4.5vw, 26px);
+    font-family: inherit;
+    font-weight: bold;
+    box-shadow: 0 5px 0 #c04000;
+    cursor: pointer;
+    letter-spacing: 2px;
+  }
+
+  /* ===== PARTICLES ===== */
+  .particle {
+    position: fixed;
+    pointer-events: none;
+    border-radius: 50%;
+    z-index: 250;
+    animation: particleFly 0.9s ease-out forwards;
+  }
+
+  @keyframes particleFly {
+    0% { opacity: 1; transform: scale(1) translate(0,0); }
+    100% { opacity: 0; transform: scale(0.3) translate(var(--tx), var(--ty)); }
+  }
+
+  /* ===== DANGER LINE ===== */
+  .danger-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 3px;
+    background: repeating-linear-gradient(90deg, #ff4444 0, #ff4444 10px, transparent 10px, transparent 20px);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* Evolution popup */
+  #evoPopup {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    top: 30%;
+    background: linear-gradient(135deg, #fffbe0, #fff5c0);
+    border: 3px solid #ffd700;
+    border-radius: 20px;
+    padding: 14px 30px;
+    z-index: 220;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(255,200,0,0.4);
+    pointer-events: none;
+    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s;
+    opacity: 0;
+  }
+
+  #evoPopup.show {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+
+  #evoPopupText {
+    font-size: clamp(16px, 4vw, 22px);
+    font-weight: bold;
+    color: #c06000;
+  }
+</style>
+</head>
+<body>
+
+<!-- TITLE SCREEN -->
+<div id="titleScreen">
+  <img id="titleLogo" src="assets/logo.png" alt="やまぐちけ だいがったい！">
+  <div class="title-chars" id="titleChars"></div>
+  <button class="start-btn" id="startBtn">はじめる！</button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="gameScreen">
+  <div id="hud">
+    <div id="scoreBox">
+      <div id="scoreLabel">スコア</div>
+      <div id="scoreValue">0</div>
+    </div>
+    <div id="nextBox">
+      <div id="nextLabel">つぎ</div>
+      <img id="nextImg" src="" alt="">
+    </div>
+  </div>
+  <div id="canvasWrap">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+</div>
+
+<!-- UFO OVERLAY -->
+<div id="ufoOverlay">
+  <canvas id="ufoCanvas"></canvas>
+  <div id="ufoText">うちゅうじんが きた！</div>
+</div>
+
+<!-- EVOLUTION POPUP -->
+<div id="evoPopup"><div id="evoPopupText"></div></div>
+
+<!-- FLOAT MESSAGE -->
+<div id="floatMsg"></div>
+
+<!-- GAME OVER -->
+<div id="gameOverScreen">
+  <div class="go-box">
+    <div class="go-title">いっぱいになっちゃった！</div>
+    <div class="go-score" id="goScore">0</div>
+    <div class="go-rank" id="goRank">がんばった！</div>
+    <button class="retry-btn" id="retryBtn">もういっかい！</button>
+  </div>
+</div>
+
+<script>
+// =============================================
+//  CONSTANTS & CHARACTER DATA
+// =============================================
+const CHARS = [
+  { id: 'dan',   img: 'assets/01_dan.png',   name: 'だん',   scale: 1.00, score: 1  },
+  { id: 'ten',   img: 'assets/02_ten.png',   name: 'てん',   scale: 1.15, score: 3  },
+  { id: 'kaiho', img: 'assets/03_kaiho.png', name: 'かいほ', scale: 1.35, score: 6  },
+  { id: 'taiki', img: 'assets/04_taiki.png', name: 'たいき', scale: 1.60, score: 10 },
+  { id: 'ayaka', img: 'assets/05_ayaka.png', name: 'あやか', scale: 1.90, score: 15 },
+  { id: 'alien', img: 'assets/05_alian.png', name: 'うちゅうじん', scale: 2.30, score: 30 },
+];
+
+const BASE_R = 28; // base radius in px (will scale with canvas)
+const GRAVITY = 0.45;
+const FRICTION = 0.995;
+const BOUNCE = 0.35;
+const DROP_ZONE_H = 60; // px from top reserved for drop indicator
+const DANGER_LINE_Y_RATIO = 0.12; // fraction of canvas height
+
+// =============================================
+//  STATE
+// =============================================
+let score = 0;
+let gameActive = false;
+let nextCharIdx = 0;
+let currentDropX = 0;
+let dragging = false;
+let balls = [];
+let merging = new Set(); // balls currently being merged (avoid double merge)
+let unlocked = new Set();
+let gameOverFlag = false;
+let animId = null;
+let canW, canH, scale;
+
+// =============================================
+//  IMAGE LOADING
+// =============================================
+const images = {};
+let imagesLoaded = 0;
+
+function loadImages(cb) {
+  const allSrcs = CHARS.map(c => c.img).concat(['assets/logo.png']);
+  allSrcs.forEach(src => {
+    const img = new Image();
+    img.onload = img.onerror = () => {
+      imagesLoaded++;
+      if (imagesLoaded === allSrcs.length) cb();
+    };
+    img.src = src;
+    images[src] = img;
+  });
+}
+
+// =============================================
+//  AUDIO (Web Audio API)
+// =============================================
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTone(freq, type, dur, vol=0.3, delay=0) {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+    gain.gain.setValueAtTime(vol, ctx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
+    osc.start(ctx.currentTime + delay);
+    osc.stop(ctx.currentTime + delay + dur);
+  } catch(e) {}
+}
+
+function soundDrop() {
+  playTone(220, 'sine', 0.08, 0.15);
+}
+
+function soundMerge() {
+  playTone(880, 'sine', 0.12, 0.3);
+  playTone(1320, 'sine', 0.10, 0.25, 0.08);
+}
+
+function soundButton() {
+  playTone(660, 'square', 0.07, 0.2);
+}
+
+function soundGameOver() {
+  [300,250,200,150].forEach((f,i) => playTone(f,'sine',0.18,0.3,i*0.12));
+}
+
+function soundAlienAppear() {
+  // ぴゅーーーーん
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(2000, ctx.currentTime + 1.2);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 1.2);
+  } catch(e) {}
+  // じゃじゃーーーん！
+  setTimeout(() => {
+    [261, 329, 392, 523].forEach((f,i) => playTone(f,'sine',1.0,0.35,i*0.05));
+  }, 1300);
+}
+
+// =============================================
+//  CANVAS SETUP
+// =============================================
+const canvas = document.getElementById('gameCanvas');
+const ctx2 = canvas.getContext('2d');
+
+function setupCanvas() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Game area: proportional to screen
+  canW = Math.min(420, vw - 16);
+  canH = Math.min(vh - 100, canW * 1.55);
+
+  canvas.width = canW;
+  canvas.height = canH;
+
+  const wrap = document.getElementById('canvasWrap');
+  wrap.style.width = canW + 'px';
+  wrap.style.height = canH + 'px';
+
+  // Scale factor relative to base design (360px wide)
+  scale = canW / 360;
+
+  currentDropX = canW / 2;
+}
+
+// =============================================
+//  BALL PHYSICS
+// =============================================
+class Ball {
+  constructor(charIdx, x, y) {
+    this.charIdx = charIdx;
+    this.char = CHARS[charIdx];
+    this.r = BASE_R * this.char.scale * scale;
+    this.x = x;
+    this.y = y;
+    this.vx = 0;
+    this.vy = 0;
+    this.settled = false;
+    this.id = Math.random().toString(36).slice(2);
+    this.alpha = 1;
+    this.scaleAnim = 1; // for pop-in effect
+    this.popTimer = 6;
+  }
+}
+
+function addBall(charIdx, x, y) {
+  const b = new Ball(charIdx, x, y);
+  b.scaleAnim = 0.3;
+  b.popTimer = 8;
+  balls.push(b);
+  return b;
+}
+
+function physicsStep() {
+  const wallL = 0;
+  const wallR = canW;
+  const floor = canH;
+
+  // Apply gravity
+  for (const b of balls) {
+    if (b.alpha < 1) continue; // merging/fading
+    b.vy += GRAVITY;
+    b.vx *= FRICTION;
+    b.vy *= FRICTION;
+    b.x += b.vx;
+    b.y += b.vy;
+
+    // Wall collisions
+    if (b.x - b.r < wallL) { b.x = wallL + b.r; b.vx = Math.abs(b.vx) * BOUNCE; }
+    if (b.x + b.r > wallR) { b.x = wallR - b.r; b.vx = -Math.abs(b.vx) * BOUNCE; }
+    if (b.y + b.r > floor) { b.y = floor - b.r; b.vy = -Math.abs(b.vy) * BOUNCE; b.vx *= 0.92; }
+
+    // Pop-in animation
+    if (b.popTimer > 0) {
+      b.scaleAnim = 1 - 0.7 * (b.popTimer / 8);
+      b.popTimer--;
+    } else {
+      b.scaleAnim = 1;
+    }
+  }
+
+  // Ball-ball collisions (simple iterative)
+  for (let i = 0; i < balls.length; i++) {
+    const a = balls[i];
+    if (a.alpha < 1) continue;
+    for (let j = i + 1; j < balls.length; j++) {
+      const b = balls[j];
+      if (b.alpha < 1) continue;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const minDist = a.r + b.r;
+      if (dist < minDist && dist > 0.01) {
+        // Push apart
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const overlap = minDist - dist;
+        a.x -= nx * overlap * 0.5;
+        a.y -= ny * overlap * 0.5;
+        b.x += nx * overlap * 0.5;
+        b.y += ny * overlap * 0.5;
+        // Transfer velocity
+        const relVx = a.vx - b.vx;
+        const relVy = a.vy - b.vy;
+        const dot = relVx * nx + relVy * ny;
+        if (dot > 0) {
+          const imp = dot * 0.55;
+          a.vx -= imp * nx; a.vy -= imp * ny;
+          b.vx += imp * nx; b.vy += imp * ny;
+        }
+      }
+    }
+  }
+}
+
+// =============================================
+//  MERGE DETECTION
+// =============================================
+let mergeQueue = [];
+
+function detectMerges() {
+  for (let i = 0; i < balls.length; i++) {
+    const a = balls[i];
+    if (a.alpha < 1 || merging.has(a.id)) continue;
+    for (let j = i + 1; j < balls.length; j++) {
+      const b = balls[j];
+      if (b.alpha < 1 || merging.has(b.id)) continue;
+      if (a.charIdx !== b.charIdx) continue;
+      if (a.charIdx >= CHARS.length - 1) continue;
+
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < a.r + b.r + 2) {
+        mergeQueue.push([a, b]);
+        merging.add(a.id);
+        merging.add(b.id);
+      }
+    }
+  }
+}
+
+function processMerges() {
+  while (mergeQueue.length > 0) {
+    const [a, b] = mergeQueue.shift();
+    const nx = (a.x + b.x) / 2;
+    const ny = (a.y + b.y) / 2;
+    const nextIdx = a.charIdx + 1;
+
+    // Remove both
+    balls = balls.filter(ball => ball !== a && ball !== b);
+    merging.delete(a.id);
+    merging.delete(b.id);
+
+    // Score
+    score += CHARS[nextIdx].score * 10;
+    document.getElementById('scoreValue').textContent = score;
+
+    // Add new
+    const nb = addBall(nextIdx, nx, ny);
+    nb.vy = -3;
+
+    // Sound & particles
+    soundMerge();
+    spawnParticles(nx, ny, 14);
+    showFloatMsg('しんか！');
+
+    // First unlock
+    if (!unlocked.has(nextIdx)) {
+      unlocked.add(nextIdx);
+      const name = CHARS[nextIdx].name;
+      showEvoPopup(name + ' とうじょう！');
+    }
+
+    // Special alien final evolution
+    if (nextIdx === CHARS.length - 1) {
+      setTimeout(triggerAlienScene, 400);
+    }
+  }
+}
+
+// =============================================
+//  PARTICLES
+// =============================================
+function spawnParticles(x, y, count) {
+  const colors = ['#FFD700','#FF6B6B','#4ECDC4','#95E77E','#FF8E53','#B388FF'];
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.className = 'particle';
+    const size = 8 + Math.random() * 10;
+    el.style.cssText = `
+      width:${size}px; height:${size}px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      left:${x}px; top:${y}px;
+      --tx:${(Math.random()-0.5)*120}px;
+      --ty:${(Math.random()-1)*120}px;
+      animation-duration:${0.6+Math.random()*0.5}s;
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1100);
+  }
+}
+
+// =============================================
+//  UI MESSAGES
+// =============================================
+let floatTimer = null;
+function showFloatMsg(text) {
+  const el = document.getElementById('floatMsg');
+  el.textContent = text;
+  el.style.opacity = 1;
+  clearTimeout(floatTimer);
+  floatTimer = setTimeout(() => el.style.opacity = 0, 800);
+}
+
+let evoTimer = null;
+function showEvoPopup(text) {
+  const el = document.getElementById('evoPopup');
+  document.getElementById('evoPopupText').textContent = text;
+  el.classList.add('show');
+  clearTimeout(evoTimer);
+  evoTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// =============================================
+//  UFO / ALIEN SCENE
+// =============================================
+function triggerAlienScene() {
+  if (!gameActive) return;
+  gameActive = false; // pause game loop temporarily
+  soundAlienAppear();
+
+  const overlay = document.getElementById('ufoOverlay');
+  overlay.style.display = 'flex';
+
+  const ufoCanvas = document.getElementById('ufoCanvas');
+  ufoCanvas.width = window.innerWidth;
+  ufoCanvas.height = window.innerHeight;
+  const uc = ufoCanvas.getContext('2d');
+
+  const uw = ufoCanvas.width;
+  const uh = ufoCanvas.height;
+
+  let t = 0;
+  const stars = Array.from({length:80}, () => ({
+    x: Math.random()*uw, y: Math.random()*uh,
+    s: Math.random()*3+1, a: Math.random()
+  }));
+
+  // UFO state
+  let ufoX = uw/2, ufoY = -80;
+  let beamAlpha = 0;
+  let textAlpha = 0;
+
+  function ufoFrame() {
+    t++;
+    uc.clearRect(0,0,uw,uh);
+
+    // Stars
+    stars.forEach(s => {
+      s.a = 0.5 + 0.5*Math.sin(t*0.05 + s.x);
+      uc.globalAlpha = s.a;
+      uc.fillStyle = '#fff';
+      uc.beginPath();
+      uc.arc(s.x, s.y, s.s, 0, Math.PI*2);
+      uc.fill();
+    });
+
+    // Move UFO down
+    if (t < 60) ufoY = -80 + (uh*0.25+80) * (t/60);
+    else ufoY = uh*0.25;
+
+    // Beam
+    if (t > 50) beamAlpha = Math.min(1, (t-50)/30);
+
+    // Draw beam
+    if (beamAlpha > 0) {
+      uc.globalAlpha = beamAlpha * 0.45;
+      const grd = uc.createLinearGradient(uw/2-60, ufoY+30, uw/2+60, ufoY+30);
+      grd.addColorStop(0, 'rgba(0,200,255,0)');
+      grd.addColorStop(0.5, 'rgba(0,200,255,0.8)');
+      grd.addColorStop(1, 'rgba(0,200,255,0)');
+      uc.fillStyle = grd;
+      uc.beginPath();
+      uc.moveTo(uw/2-40, ufoY+30);
+      uc.lineTo(uw/2-90, uh*0.75);
+      uc.lineTo(uw/2+90, uh*0.75);
+      uc.lineTo(uw/2+40, ufoY+30);
+      uc.fill();
+    }
+
+    // Draw UFO body
+    uc.globalAlpha = 1;
+    // Saucer bottom
+    uc.fillStyle = '#c0c0c0';
+    uc.beginPath();
+    uc.ellipse(uw/2, ufoY+28, 90, 22, 0, 0, Math.PI*2);
+    uc.fill();
+    // Saucer top dome
+    const domeGrd = uc.createRadialGradient(uw/2-10, ufoY-10, 5, uw/2, ufoY, 50);
+    domeGrd.addColorStop(0, '#99f9ff');
+    domeGrd.addColorStop(0.6, '#00b8e6');
+    domeGrd.addColorStop(1, '#004488');
+    uc.fillStyle = domeGrd;
+    uc.beginPath();
+    uc.ellipse(uw/2, ufoY+5, 50, 35, 0, Math.PI, Math.PI*2);
+    uc.fill();
+    // Rim highlight
+    uc.strokeStyle = '#e0f0ff';
+    uc.lineWidth = 3;
+    uc.globalAlpha = 0.6;
+    uc.beginPath();
+    uc.ellipse(uw/2, ufoY+18, 88, 18, 0, Math.PI+0.2, Math.PI*2-0.2);
+    uc.stroke();
+    // Lights
+    uc.globalAlpha = 1;
+    const lightCols = ['#f00','#ff0','#0f0','#0af'];
+    for (let i = 0; i < 4; i++) {
+      const lx = uw/2 - 55 + i*38;
+      const flash = Math.sin(t*0.15 + i*1.2) > 0;
+      uc.fillStyle = flash ? lightCols[i] : '#333';
+      uc.beginPath();
+      uc.arc(lx, ufoY+28, 8, 0, Math.PI*2);
+      uc.fill();
+    }
+
+    // Sparkles in beam
+    if (t > 60) {
+      for (let i = 0; i < 6; i++) {
+        const sx = uw/2 + (Math.random()-0.5)*150;
+        const sy = ufoY+60 + Math.random()*(uh*0.75-ufoY-60);
+        uc.globalAlpha = Math.random()*0.8;
+        uc.fillStyle = '#0ff';
+        uc.beginPath();
+        uc.arc(sx, sy, 3+Math.random()*4, 0, Math.PI*2);
+        uc.fill();
+      }
+    }
+
+    // Text fade in
+    if (t > 100) {
+      textAlpha = Math.min(1, (t-100)/20);
+      document.getElementById('ufoText').style.opacity = textAlpha;
+    }
+
+    if (t < 160) {
+      requestAnimationFrame(ufoFrame);
+    } else {
+      // End scene
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        document.getElementById('ufoText').style.opacity = 0;
+        gameActive = true;
+        // Resume loop
+        gameLoop();
+      }, 500);
+    }
+  }
+
+  ufoFrame();
+}
+
+// =============================================
+//  DROP CONTROL
+// =============================================
+function getCanvasX(clientX) {
+  const rect = canvas.getBoundingClientRect();
+  return clientX - rect.left;
+}
+
+function clampDropX(x) {
+  const r = CHARS[nextCharIdx].r || BASE_R * CHARS[nextCharIdx].scale * scale;
+  return Math.max(r, Math.min(canW - r, x));
+}
+
+let dropCooldown = false;
+
+function dropBall(x) {
+  if (!gameActive || dropCooldown) return;
+  dropCooldown = true;
+  setTimeout(() => dropCooldown = false, 500);
+
+  const r = BASE_R * CHARS[nextCharIdx].scale * scale;
+  const cx = Math.max(r, Math.min(canW - r, x));
+  const b = addBall(nextCharIdx, cx, DROP_ZONE_H);
+  b.vy = 2;
+  soundDrop();
+
+  // Pick next
+  nextCharIdx = Math.floor(Math.random() * Math.min(3, CHARS.length));
+  document.getElementById('nextImg').src = CHARS[nextCharIdx].img;
+}
+
+// Touch / mouse events on canvas
+canvas.addEventListener('mousemove', e => {
+  if (!gameActive) return;
+  currentDropX = clampDropX(getCanvasX(e.clientX));
+});
+
+canvas.addEventListener('click', e => {
+  if (!gameActive) return;
+  dropBall(clampDropX(getCanvasX(e.clientX)));
+});
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (!gameActive) return;
+  const t = e.touches[0];
+  currentDropX = clampDropX(getCanvasX(t.clientX));
+  dragging = true;
+}, {passive:false});
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!gameActive || !dragging) return;
+  const t = e.touches[0];
+  currentDropX = clampDropX(getCanvasX(t.clientX));
+}, {passive:false});
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (!gameActive) return;
+  dragging = false;
+  dropBall(currentDropX);
+}, {passive:false});
+
+// =============================================
+//  GAME OVER CHECK
+// =============================================
+const GAME_OVER_Y = canH * DANGER_LINE_Y_RATIO;
+
+function checkGameOver() {
+  if (gameOverFlag) return;
+  for (const b of balls) {
+    if (b.alpha < 1) continue;
+    // Only trigger if ball is settled-ish (low velocity)
+    const speed = Math.abs(b.vx) + Math.abs(b.vy);
+    if (b.y - b.r < canH * DANGER_LINE_Y_RATIO && speed < 1.5) {
+      gameOverFlag = true;
+      gameActive = false;
+      soundGameOver();
+      setTimeout(showGameOver, 600);
+      return;
+    }
+  }
+}
+
+function showGameOver() {
+  document.getElementById('goScore').textContent = score;
+  let rank = 'がんばった！';
+  if (score >= 3000) rank = 'うちゅうさいきょう！';
+  else if (score >= 1500) rank = 'てんさい！';
+  else if (score >= 500) rank = 'すごい！';
+  document.getElementById('goRank').textContent = rank;
+  document.getElementById('gameOverScreen').style.display = 'flex';
+}
+
+// =============================================
+//  RENDER
+// =============================================
+function render() {
+  ctx2.clearRect(0, 0, canW, canH);
+
+  // Danger line
+  ctx2.save();
+  ctx2.setLineDash([10,10]);
+  ctx2.strokeStyle = 'rgba(255,60,60,0.55)';
+  ctx2.lineWidth = 2;
+  ctx2.beginPath();
+  ctx2.moveTo(0, canH * DANGER_LINE_Y_RATIO);
+  ctx2.lineTo(canW, canH * DANGER_LINE_Y_RATIO);
+  ctx2.stroke();
+  ctx2.restore();
+
+  // Drop indicator
+  if (gameActive) {
+    const r = BASE_R * CHARS[nextCharIdx].scale * scale;
+    ctx2.save();
+    ctx2.globalAlpha = 0.22;
+    ctx2.strokeStyle = '#ff8800';
+    ctx2.lineWidth = 1.5;
+    ctx2.setLineDash([6,4]);
+    ctx2.beginPath();
+    ctx2.moveTo(currentDropX, DROP_ZONE_H + r);
+    ctx2.lineTo(currentDropX, canH);
+    ctx2.stroke();
+    ctx2.restore();
+
+    // Preview ball
+    ctx2.save();
+    ctx2.globalAlpha = 0.5;
+    ctx2.drawImage(
+      images[CHARS[nextCharIdx].img],
+      currentDropX - r, DROP_ZONE_H - r, r*2, r*2
+    );
+    ctx2.restore();
+  }
+
+  // Balls
+  for (const b of balls) {
+    ctx2.save();
+    const sa = b.scaleAnim;
+    ctx2.translate(b.x, b.y);
+    ctx2.scale(sa, sa);
+    // Shadow
+    ctx2.shadowColor = 'rgba(0,0,0,0.2)';
+    ctx2.shadowBlur = 8;
+    ctx2.shadowOffsetY = 3;
+    // Clip to circle
+    ctx2.beginPath();
+    ctx2.arc(0, 0, b.r, 0, Math.PI*2);
+    ctx2.clip();
+    ctx2.drawImage(images[b.char.img], -b.r, -b.r, b.r*2, b.r*2);
+    // Subtle highlight
+    ctx2.shadowColor = 'transparent';
+    const hl = ctx2.createRadialGradient(-b.r*0.3, -b.r*0.3, 0, 0, 0, b.r);
+    hl.addColorStop(0, 'rgba(255,255,255,0.3)');
+    hl.addColorStop(0.5, 'rgba(255,255,255,0)');
+    hl.addColorStop(1, 'rgba(0,0,0,0.08)');
+    ctx2.fillStyle = hl;
+    ctx2.fillRect(-b.r, -b.r, b.r*2, b.r*2);
+    ctx2.restore();
+  }
+}
+
+// =============================================
+//  MAIN LOOP
+// =============================================
+let lastTime = 0;
+function gameLoop(ts=0) {
+  if (!gameActive) return;
+  const dt = Math.min(ts - lastTime, 32);
+  lastTime = ts;
+
+  // Multiple physics steps per frame for stability
+  const steps = 3;
+  for (let i = 0; i < steps; i++) physicsStep();
+
+  detectMerges();
+  processMerges();
+  checkGameOver();
+  render();
+
+  animId = requestAnimationFrame(gameLoop);
+}
+
+// =============================================
+//  GAME INIT / RESET
+// =============================================
+function initGame() {
+  balls = [];
+  merging.clear();
+  mergeQueue = [];
+  score = 0;
+  gameOverFlag = false;
+  unlocked.clear();
+  document.getElementById('scoreValue').textContent = '0';
+  document.getElementById('gameOverScreen').style.display = 'none';
+
+  setupCanvas();
+
+  currentDropX = canW / 2;
+  nextCharIdx = Math.floor(Math.random() * 2);
+  document.getElementById('nextImg').src = CHARS[nextCharIdx].img;
+
+  document.getElementById('titleScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'flex';
+
+  gameActive = true;
+  if (animId) cancelAnimationFrame(animId);
+  gameLoop();
+}
+
+// =============================================
+//  TITLE SETUP
+// =============================================
+function setupTitle() {
+  const wrap = document.getElementById('titleChars');
+  wrap.innerHTML = '';
+  CHARS.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'title-char';
+    const img = document.createElement('img');
+    img.src = c.img;
+    img.alt = c.name;
+    div.appendChild(img);
+    wrap.appendChild(div);
+  });
+}
+
+// =============================================
+//  BUTTONS
+// =============================================
+document.getElementById('startBtn').addEventListener('click', () => {
+  soundButton();
+  initGame();
+});
+
+document.getElementById('retryBtn').addEventListener('click', () => {
+  soundButton();
+  initGame();
+});
+
+// =============================================
+//  RESIZE
+// =============================================
+window.addEventListener('resize', () => {
+  if (document.getElementById('gameScreen').style.display !== 'none') {
+    setupCanvas();
+    // Rescale ball radii
+    balls.forEach(b => {
+      b.r = BASE_R * b.char.scale * scale;
+    });
+  }
+});
+
+// =============================================
+//  BOOT
+// =============================================
+loadImages(() => {
+  setupTitle();
+});
+</script>
+</body>
+</html>
