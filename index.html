@@ -685,13 +685,16 @@ const ITEMS=[
   {id:'add',   label:'⭐ キャラついか'},
   {id:'del',   label:'🗑️ ちいさいキャラけす'},
 ];
+// ===== 修正後 =====
 function showItemPicker(){
   if(!gameActive)return;
   gameActive=false;
+  processing=false;          // ← 追加：processingフラグをリセット
+  clearInterval(timerInterval); // ← 追加：タイマー一時停止
+
   const picker=document.getElementById('itemPicker');
   const btns=document.getElementById('itemPickerBtns');
   btns.innerHTML='';
-  // ランダム3個
   const shuffled=[...ITEMS].sort(()=>Math.random()-0.5).slice(0,3);
   shuffled.forEach(item=>{
     const btn=document.createElement('button');
@@ -700,6 +703,9 @@ function showItemPicker(){
       picker.style.display='none';
       applyItem(item.id);
       gameActive=true;
+      startTimer();            // ← 追加：タイマー再開
+      if(animId) cancelAnimationFrame(animId); // ← 追加
+      gameLoop();              // ← 追加：gameLoop再起動
     });
     btns.appendChild(btn);
   });
